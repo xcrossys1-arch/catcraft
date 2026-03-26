@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CatCraft — Minecraft</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #0f0f18;
+    --bg3: #13131f;
+    --border: #1e1e35;
+    --accent: #5b21b6;
+    --accent2: #7c3aed;
+    --glow: #8b5cf6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --gold: #f59e0b;
+    --text: #c4c4d4;
+    --text2: #7070a0;
+    --white: #e8e8f0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* SCANLINES OVERLAY */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* NOISE TEXTURE */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    height: 60px;
+  }
+
+  .nav-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 13px;
+    color: var(--glow);
+    text-shadow: 0 0 20px var(--accent2);
+    letter-spacing: 2px;
+    cursor: pointer;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+  }
+
+  .nav-links a {
+    color: var(--text2);
+    text-decoration: none;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    position: relative;
+  }
+
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0; right: 0;
+    height: 1px;
+    background: var(--glow);
+    transform: scaleX(0);
+    transition: transform 0.2s;
+  }
+
+  .nav-links a:hover { color: var(--white); }
+  .nav-links a:hover::after { transform: scaleX(1); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    padding-top: 60px;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 40%, rgba(91,33,182,0.12) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 20% 80%, rgba(124,58,237,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 80% 20%, rgba(139,92,246,0.06) 0%, transparent 60%);
+  }
+
+  /* GRID */
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(91,33,182,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(91,33,182,0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 70% 70% at 50% 50%, black 0%, transparent 100%);
+  }
+
+  .hero-content {
+    position: relative;
+    text-align: center;
+    z-index: 2;
+  }
+
+  .hero-tag {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--glow);
+    border: 1px solid var(--accent);
+    padding: 6px 16px;
+    margin-bottom: 32px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .hero-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(28px, 6vw, 64px);
+    color: var(--white);
+    text-shadow:
+      0 0 40px rgba(139,92,246,0.8),
+      0 0 80px rgba(91,33,182,0.4);
+    line-height: 1.4;
+    margin-bottom: 12px;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .hero-title span {
+    color: var(--glow);
+    display: block;
+  }
+
+  .hero-sub {
+    font-size: 13px;
+    color: var(--text2);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 48px;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .hero-ip {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 14px 28px;
+    margin-bottom: 40px;
+    animation: fadeUp 0.6s 0.3s ease both;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .hero-ip:hover {
+    border-color: var(--accent2);
+    box-shadow: 0 0 20px rgba(91,33,182,0.3);
+  }
+
+  .hero-ip-label { font-size: 9px; color: var(--text2); letter-spacing: 2px; }
+  .hero-ip-value { font-size: 14px; color: var(--white); }
+  .hero-ip-copy { font-size: 9px; color: var(--accent2); letter-spacing: 1px; }
+
+  .hero-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    animation: fadeUp 0.6s 0.4s ease both;
+  }
+
+  .btn {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 14px 28px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary {
+    background: var(--accent2);
+    color: var(--white);
+    box-shadow: 0 0 20px rgba(124,58,237,0.4);
+  }
+
+  .btn-primary:hover {
+    background: var(--glow);
+    box-shadow: 0 0 40px rgba(139,92,246,0.6);
+    transform: translateY(-2px);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+
+  .btn-outline:hover {
+    border-color: var(--accent2);
+    color: var(--white);
+    transform: translateY(-2px);
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    border-top: 1px solid var(--border);
+    background: rgba(15,15,24,0.8);
+    display: flex;
+    justify-content: center;
+    gap: 60px;
+    padding: 20px 40px;
+    animation: fadeUp 0.6s 0.5s ease both;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 20px;
+    color: var(--white);
+    display: block;
+    margin-bottom: 6px;
+  }
+
+  .stat-value.online { color: var(--green); text-shadow: 0 0 10px rgba(34,197,94,0.5); }
+  .stat-value.gold { color: var(--gold); }
+
+  .stat-label {
+    font-size: 9px;
+    color: var(--text2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* SECTIONS */
+  section {
+    padding: 100px 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .section-header {
+    margin-bottom: 60px;
+  }
+
+  .section-tag {
+    font-size: 9px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .section-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(16px, 3vw, 28px);
+    color: var(--white);
+    line-height: 1.5;
+  }
+
+  /* DIVIDER */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0 40px;
+  }
+
+  /* ONLINE SECTION */
+  .online-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .online-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .online-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--glow));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .online-card:hover { border-color: var(--accent); transform: translateY(-4px); }
+  .online-card:hover::before { opacity: 1; }
+
+  .card-mode {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    color: var(--white);
+    margin-bottom: 12px;
+  }
+
+  .card-desc {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.8;
+    margin-bottom: 20px;
+  }
+
+  .card-players {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  .dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  .players-count {
+    font-size: 11px;
+    color: var(--green);
+  }
+
+  /* DONATE SECTION */
+  #donate { background: var(--bg2); max-width: 100%; padding: 100px; }
+  #donate > * { max-width: 1200px; margin-left: auto; margin-right: auto; }
+
+  .donate-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .donate-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 36px 28px;
+    text-align: center;
+    position: relative;
+    transition: all 0.2s;
+    overflow: hidden;
+  }
+
+  .donate-card.featured {
+    border-color: var(--accent2);
+    box-shadow: 0 0 40px rgba(91,33,182,0.2);
+  }
+
+  .donate-card.featured::after {
+    content: 'POPULAR';
+    position: absolute;
+    top: 16px; right: -20px;
+    background: var(--accent2);
+    color: white;
+    font-size: 8px;
+    font-family: 'Press Start 2P', monospace;
+    padding: 4px 32px;
+    transform: rotate(45deg);
+    letter-spacing: 1px;
+  }
+
+  .donate-card:hover {
+    border-color: var(--glow);
+    transform: translateY(-6px);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+  }
+
+  .donate-tier {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--text2);
+    letter-spacing: 2px;
+    margin-bottom: 20px;
+  }
+
+  .donate-price {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 28px;
+    color: var(--white);
+    margin-bottom: 4px;
+  }
+
+  .donate-period { font-size: 10px; color: var(--text2); margin-bottom: 28px; }
+
+  .donate-perks {
+    list-style: none;
+    margin-bottom: 32px;
+    text-align: left;
+  }
+
+  .donate-perks li {
+    font-size: 11px;
+    color: var(--text);
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .donate-perks li::before { content: '▸'; color: var(--glow); }
+
+  /* RULES SECTION */
+  .rules-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .rule-item {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    transition: border-color 0.2s;
+  }
+
+  .rule-item:hover { border-color: var(--accent); }
+
+  .rule-num {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    min-width: 30px;
+    padding-top: 2px;
+  }
+
+  .rule-text {
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.7;
+  }
+
+  .rule-text strong { color: var(--white); }
+
+  /* DISCORD */
+  .discord-block {
+    background: linear-gradient(135deg, #1e1e35 0%, #13131f 100%);
+    border: 1px solid var(--border);
+    padding: 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .discord-block::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(91,33,182,0.1) 0%, transparent 70%);
+  }
+
+  .discord-logo {
+    font-size: 48px;
+    margin-bottom: 24px;
+    display: block;
+  }
+
+  .discord-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 18px;
+    color: var(--white);
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .discord-sub {
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 36px;
+    position: relative;
+    line-height: 1.8;
+  }
+
+  .btn-discord {
+    background: #5865F2;
+    color: white;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 16px 36px;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 1px;
+    text-decoration: none;
+    display: inline-block;
+    position: relative;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(88,101,242,0.4);
+  }
+
+  .btn-discord:hover {
+    background: #4752C4;
+    transform: translateY(-2px);
+    box-shadow: 0 0 40px rgba(88,101,242,0.6);
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text2);
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .footer-logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: var(--accent2);
+  }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 30px; right: 30px;
+    background: var(--bg3);
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 12px 24px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    z-index: 9999;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  /* SCROLL REVEAL */
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  @media (max-width: 768px) {
+    nav { padding: 0 20px; }
+    .nav-links { display: none; }
+    .online-grid, .donate-grid { grid-template-columns: 1fr; }
+    section { padding: 60px 20px; }
+    .status-bar { gap: 24px; flex-wrap: wrap; }
+    #donate { padding: 60px 20px; }
+    .discord-block { padding: 40px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">⬛ CatCraft</div>
+  <ul class="nav-links">
+    <li><a href="#online">Сервер</a></li>
+    <li><a href="#donate">Донат</a></li>
+    <li><a href="#rules">Правила</a></li>
+    <li><a href="#discord">Telegram</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <div class="hero-content">
+    <div class="hero-tag">▸ Minecraft Server ◂</div>
+    <h1 class="hero-title">
+      CAT
+      <span>CRAFT</span>
+    </h1>
+    <p class="hero-sub">Выживание · PvP · Ивенты · Донат</p>
+
+    <div class="hero-ip" onclick="copyIP()">
+      <span class="hero-ip-label">IP</span>
+      <span class="hero-ip-value" id="server-ip">143.20.155.12:25739</span>
+      <span class="hero-ip-copy">[COPY]</span>
+    </div>
+
+    <div class="hero-buttons">
+      <a href="#donate" class="btn btn-primary">Донат</a>
+      <a href="#discord" class="btn btn-outline">Telegram</a>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="stat-item">
+      <span class="stat-value online" id="online-count">247</span>
+      <span class="stat-label">Онлайн сейчас</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value gold">1,482</span>
+      <span class="stat-label">Всего игроков</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">1.20.4</span>
+      <span class="stat-label">Версия</span>
+    </div>
+    <div class="stat-item">
+      <span class="stat-value">24/7</span>
+      <span class="stat-label">Аптайм</span>
+    </div>
+  </div>
+</div>
+
+<!-- ONLINE / MODES -->
+<section id="online">
+  <div class="section-header reveal">
+    <span class="section-tag">// Режимы игры</span>
+    <h2 class="section-title">Выбери свой путь</h2>
+  </div>
+
+  <div class="reveal">
+    <div class="online-card" style="max-width: 600px; margin: 0 auto;">
+      <div class="card-mode">🌍 Выживание</div>
+      <p class="card-desc">Классическое выживание с экономикой и кланами.<br>Стройте, торгуйте, развивайтесь.</p>
+      <div class="card-players">
+        <div class="dot"></div>
+        <span class="players-count" id="online-count2">247 игроков онлайн</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- DONATE -->
+<div id="donate">
+  <section style="padding: 100px 0;">
+    <div class="section-header reveal">
+      <span class="section-tag">// Привилегии</span>
+      <h2 class="section-title">Поддержи сервер</h2>
+    </div>
+
+    <div class="donate-grid reveal" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="donate-card">
+        <div class="donate-tier">🐾 НУБИК</div>
+        <div class="donate-price">20₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Нубик]</li>
+          <li>5 домов</li>
+          <li>x1.2 опыт</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%; text-align:center; font-size:8px;">Купить</a>
+      </div>
+
+      <div class="donate-card">
+        <div class="donate-tier">⚡ ПРОФИ</div>
+        <div class="donate-price">50₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Профи]</li>
+          <li>8 домов</li>
+          <li>x1.5 опыт</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%; text-align:center; font-size:8px;">Купить</a>
+      </div>
+
+      <div class="donate-card">
+        <div class="donate-tier">🔮 МАГ</div>
+        <div class="donate-price">100₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Маг]</li>
+          <li>12 домов</li>
+          <li>x2 опыт, /fly</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%; text-align:center; font-size:8px;">Купить</a>
+      </div>
+
+      <div class="donate-card">
+        <div class="donate-tier">👑 БОГ</div>
+        <div class="donate-price">150₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Бог]</li>
+          <li>16 домов</li>
+          <li>x2.5 опыт, /nick</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%; text-align:center; font-size:8px;">Купить</a>
+      </div>
+
+      <div class="donate-card">
+        <div class="donate-tier">🏰 ЛОРД</div>
+        <div class="donate-price">250₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Лорд]</li>
+          <li>20 домов</li>
+          <li>x3 опыт, частицы</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%; text-align:center; font-size:8px;">Купить</a>
+      </div>
+
+      <div class="donate-card featured">
+        <div class="donate-tier">⭐ ЛЕГЕНДА</div>
+        <div class="donate-price">500₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Легенда]</li>
+          <li>30 домов</li>
+          <li>x4 опыт, VIP-варпы</li>
+        </ul>
+        <a href="#" class="btn btn-primary" style="width:100%; text-align:center; font-size:8px;">Купить</a>
+      </div>
+
+      <div class="donate-card">
+        <div class="donate-tier">🐉 ДРАКОН</div>
+        <div class="donate-price">1000₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Дракон]</li>
+          <li>50 домов</li>
+          <li>x5 опыт, приоритет входа</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%; text-align:center; font-size:8px;">Купить</a>
+      </div>
+
+      <div class="donate-card" style="border-color: var(--gold); box-shadow: 0 0 30px rgba(245,158,11,0.15);">
+        <div class="donate-tier" style="color: var(--gold);">👿 ПОВЕЛИТЕЛЬ</div>
+        <div class="donate-price" style="color: var(--gold);">1500₽</div>
+        <div class="donate-period">/ месяц</div>
+        <ul class="donate-perks">
+          <li>Приставка [Повелитель]</li>
+          <li>∞ домов</li>
+          <li>x6 опыт, все бонусы</li>
+        </ul>
+        <a href="#" class="btn btn-outline" style="width:100%; text-align:center; font-size:8px; border-color: var(--gold); color: var(--gold);">Купить</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<hr class="divider">
+
+<!-- RULES -->
+<section id="rules">
+  <div class="section-header reveal">
+    <span class="section-tag">// Правила сервера</span>
+    <h2 class="section-title">Читай. Соблюдай.</h2>
+  </div>
+
+  <div class="rules-list reveal">
+    <div class="rule-item">
+      <span class="rule-num">01</span>
+      <span class="rule-text"><strong>Уважай других игроков.</strong> Оскорбления, дискриминация и токсичность — бан без предупреждения.</span>
+    </div>
+    <div class="rule-item">
+      <span class="rule-num">02</span>
+      <span class="rule-text"><strong>Читы и эксплойты запрещены.</strong> Использование любых сторонних программ — пермбан.</span>
+    </div>
+    <div class="rule-item">
+      <span class="rule-num">03</span>
+      <span class="rule-text"><strong>Гриферство запрещено</strong> на режимах выживания. На анархии — нет правил.</span>
+    </div>
+    <div class="rule-item">
+      <span class="rule-num">04</span>
+      <span class="rule-text"><strong>Реклама других серверов</strong> в чате и личных сообщениях — бан.</span>
+    </div>
+    <div class="rule-item">
+      <span class="rule-num">05</span>
+      <span class="rule-text"><strong>Решения администрации</strong> окончательны. Апелляции — только через Discord.</span>
+    </div>
+    <div class="rule-item">
+      <span class="rule-num">06</span>
+      <span class="rule-text"><strong>Дюп предметов</strong> и использование багов — мут/бан в зависимости от масштаба.</span>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TELEGRAM -->
+<section id="discord" style="padding: 80px 40px;">
+  <div class="discord-block reveal">
+    <span class="discord-logo">✈️</span>
+    <h2 class="discord-title">Наш Telegram</h2>
+    <p class="discord-sub">
+      Новости сервера, ивенты и общение с комьюнити.<br>
+      Подписывайся и будь в курсе всего первым.
+    </p>
+    <a href="https://t.me/CatCraftme" class="btn-discord" target="_blank" style="background: #229ED9; box-shadow: 0 0 20px rgba(34,158,217,0.4);">Перейти в Telegram</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">⬛ CatCraft</span>
+  <span>Не является официальным продуктом Mojang / Microsoft</span>
+  <span>© 2024 — Все права защищены</span>
+</footer>
+
+<div class="toast" id="toast">✔ IP скопирован!</div>
+
+<script>
+  function copyIP() {
+    const ip = document.getElementById('server-ip').textContent;
+    navigator.clipboard.writeText(ip).catch(() => {});
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Анимация счётчика онлайна
+  let count = 247;
+  setInterval(() => {
+    count += Math.floor(Math.random() * 5) - 2;
+    count = Math.max(200, Math.min(300, count));
+    document.getElementById('online-count').textContent = count;
+  }, 3000);
+</script>
+
+</body>
+</html>
